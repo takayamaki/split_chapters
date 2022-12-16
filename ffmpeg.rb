@@ -22,7 +22,7 @@ module FFMpeg
       [
         BASE_COMMAND,
         "-ss #{chapter.start_at_integer_part}",
-        "-i #{convert_to_win_path(path)}",
+        "-i \"#{convert_to_win_path(path)}\"",
         "-ss #{chapter.start_at_fractional_part.to_f}",
         "-t #{chapter.duration.to_f}",
         ENCODE_OPTIONS,
@@ -35,12 +35,12 @@ module FFMpeg
       [
         BASE_COMMAND,
         "-ss #{chapter.start_at_integer_part}",
-        "-i #{convert_to_win_path(path)}",
+        "-i \"#{convert_to_win_path(path)}\"",
         "-ss #{chapter.start_at_fractional_part.to_f}",
         "-t #{chapter.duration.to_f}",
         ENCODE_OPTIONS,
         '-pass 2 -movflags +faststart',
-        convert_to_win_path(build_output_path(path, seq_number))
+        "\"#{convert_to_win_path(build_output_path(path, seq_number))}\""
       ].join(' ')
     end
 
