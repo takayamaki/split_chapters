@@ -26,10 +26,10 @@ module FFMpeg
     def two_pass_encode_1st_pass(chapter, path)
       [
         BASE_COMMAND,
-        "-ss #{chapter.start_at_integer_part}",
-        "-i \"#{convert_to_win_path(path)}\"",
-        "-ss #{chapter.start_at_fractional_part.to_f}",
-        "-t #{chapter.duration.to_f}",
+        seek_integer_part_option(chapter),
+        input_file_option(path),
+        seek_fractional_part_option(chapter),
+        duration_option(chapter),
         ENCODE_OPTIONS,
         '-pass 1 -f null',
         'nul'
@@ -39,16 +39,31 @@ module FFMpeg
     def two_pass_encode_2nd_pass(chapter, path, seq_number)
       [
         BASE_COMMAND,
-        "-ss #{chapter.start_at_integer_part}",
-        "-i \"#{convert_to_win_path(path)}\"",
-        "-ss #{chapter.start_at_fractional_part.to_f}",
-        "-t #{chapter.duration.to_f}",
+        seek_integer_part_option(chapter),
+        input_file_option(path),
+        seek_fractional_part_option(chapter),
+        duration_option(chapter),
         ENCODE_OPTIONS,
         '-pass 2 -movflags +faststart',
         "\"#{convert_to_win_path(build_output_path(path, seq_number))}\""
       ].join(' ')
     end
 
+    def seek_integer_part_option(chapter)
+      "-ss #{chapter.start_at_integer_part}"
+    end
+
+    def seek_fractional_part_option(chapter)
+      "-ss #{chapter.start_at_fractional_part.to_f}"
+    end
+
+    def duration_option(chapter)
+      "-t #{chapter.duration.to_f}"
+    end
+
+    def input_file_option(path)
+      "-i \"#{convert_to_win_path(path)}\""
+    end
 
     def build_output_path(src_path, seq_number)
       src_path = Pathname(src_path)
