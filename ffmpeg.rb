@@ -5,16 +5,21 @@ require 'pathname'
 module FFMpeg
   BASE_COMMAND = 'bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -hwaccel qsv'
   ENCODE_OPTIONS = '-vcodec libx264 -preset veryslow -b:v 8192k -acodec aac -b:a 128k -map 0:0 -map 0:1 -pix_fmt yuv420p'
+  MIN_DURATION = 60
+  MAX_DURATION = 600
 
   class << self
     def output_commands(video)
       seq_number_digits = video.chapters.length.to_s.length
       video.chapters.each.with_index(1).flat_map do |chapter, seq_number|
         formatted_seq_number = format("%0#{seq_number_digits}d", seq_number)
-        [
+        commands = [
           two_pass_encode_1st_pass(chapter, video.file_path),
           two_pass_encode_2nd_pass(chapter, video.file_path, formatted_seq_number)
         ]
+
+        commands.map! { "@rem #{_1}" } unless (MIN_DURATION..MAX_DURATION).include?(chapter.duration)
+        commands
       end
     end
 
