@@ -16,4 +16,5 @@ videos = file_paths.map do |path|
   Video.new(path, chapters)
 end
 
+puts "chcp 65001"
 videos.flat_map { |video| FFMpeg.output_commands(video) }.each { |line| puts line }
