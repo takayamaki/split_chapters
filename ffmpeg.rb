@@ -3,7 +3,7 @@
 require 'pathname'
 
 module FFMpeg
-  BASE_COMMAND = 'bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -hwaccel qsv'
+  BASE_COMMAND = 'bin\ffmpeg.exe -y -hide_banner -loglevel error -stats'
   ENCODE_OPTIONS = '-vcodec libx264 -preset veryslow -b:v 8192k -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -pix_fmt yuv420p'
   MIN_DURATION = 60
   MAX_DURATION = 600
