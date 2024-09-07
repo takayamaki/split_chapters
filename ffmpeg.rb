@@ -31,6 +31,7 @@ module FFMpeg
         seek_fractional_part_option(chapter),
         duration_option(chapter),
         ENCODE_OPTIONS,
+        stats_file_name_option(path),
         '-pass 1 -f null',
         'nul'
       ].join(' ')
@@ -44,6 +45,7 @@ module FFMpeg
         seek_fractional_part_option(chapter),
         duration_option(chapter),
         ENCODE_OPTIONS,
+        stats_file_name_option(path),
         '-pass 2 -movflags +faststart',
         "\"#{convert_to_win_path(build_output_path(path, seq_number))}\""
       ].join(' ')
@@ -59,6 +61,11 @@ module FFMpeg
 
     def duration_option(chapter)
       "-t #{chapter.duration.to_f}"
+    end
+
+    def stats_file_name_option(src_path)
+      src_path = Pathname(src_path)
+      "-x264-params stats=\"#{src_path.basename(src_path.extname)}.log\""
     end
 
     def input_file_option(path)
