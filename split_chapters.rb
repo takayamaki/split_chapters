@@ -18,3 +18,4 @@ end
 
 print "chcp 65001\r\n"
 videos.flat_map { |video| FFMpeg.output_commands(video) }.each { print "#{_1}\r\n" }
+videos.flat_map { |video| FFMpeg.remove_2pass_log_commands(video.file_path) }.each { print "#{_1}\r\n" }

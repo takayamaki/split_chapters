@@ -23,6 +23,14 @@ module FFMpeg
       end
     end
 
+    def remove_2pass_log_commands(src_path)
+      src_path = Pathname(src_path)
+      [
+        "del \"#{src_path.basename(src_path.extname)}.log\"",
+        "del \"#{src_path.basename(src_path.extname)}.log.mbtree\"",
+      ]
+    end
+
     def two_pass_encode_1st_pass(chapter, path)
       [
         BASE_COMMAND,
