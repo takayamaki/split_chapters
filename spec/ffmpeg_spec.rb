@@ -99,6 +99,10 @@ RSpec.describe FFMpeg do
       )
     end
 
+    it 'probe ファイル名を %RANDOM% で bat プロセスごとに一意にする（同時実行での取り合い防止）' do
+      expect(header).to include 'set "PROBE=%TEMP%\\split_chapters_probe_%RANDOM%%RANDOM%.txt"'
+    end
+
     it 'CRF / LIMIT / ABRBV / CRFCAP / PROBETHR を set する' do
       expect(header).to include(
         'set "CRF=18"',
@@ -137,6 +141,10 @@ RSpec.describe FFMpeg do
 
       it 'setlocal を endlocal で閉じてから次の出力に続ける' do
         expect(footer.index('endlocal')).to be < footer.index('goto :end_abc123')
+      end
+
+      it 'probe ファイルを消してから endlocal する' do
+        expect(footer.index('if exist "%PROBE%" del "%PROBE%"')).to be < footer.index('endlocal')
       end
     end
 

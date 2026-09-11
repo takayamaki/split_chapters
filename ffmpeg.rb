@@ -30,7 +30,8 @@ module FFMpeg
     set "X264OPT=ref=4:bframes=2:b-pyramid=none:level=5.1"
     rem  force_key_frames : an I frame every second, for seeking / cueing in the VJ software
     set "VBASE=-vcodec libx264 -preset veryslow -profile:v high -pix_fmt yuv420p -force_key_frames "expr:gte(t,n_forced)""
-    set "PROBE=%TEMP%\\split_chapters_probe.txt"
+    rem  %RANDOM% so that two bats running at the same time do not fight over the file
+    set "PROBE=%TEMP%\\split_chapters_probe_%RANDOM%%RANDOM%.txt"
     set /a LIMITBPS=%LIMIT%*1000
   BAT
 
@@ -45,6 +46,7 @@ module FFMpeg
   # and still run in sequence. duplicated :encode bodies are identical, so it
   # does not matter which copy a call resolves to.
   FOOTER = <<~'BAT'
+    if exist "%PROBE%" del "%PROBE%"
     endlocal
     goto :end___RUN_ID__
 
