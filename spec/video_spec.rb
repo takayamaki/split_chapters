@@ -15,16 +15,23 @@ RSpec.describe Video do
     end
 
     context 'r_frame_rate と avg_frame_rate のズレが 1% 以内の素材' do
-      it 'CFR とみなして r_frame_rate を返す'
+      it 'CFR とみなして r_frame_rate を返す' do
+        expect(video_with(r_frame_rate: '24000/1001', avg_frame_rate: '2397/100').frame_rate).to eq '24000/1001'
+      end
     end
 
     context 'avg_frame_rate が r_frame_rate から 1% 超ズレる VFR 素材' do
-      it 'avg が 45fps 以下なら 30 に正規化する'
-      it 'avg が 45fps を超えるなら 60 に正規化する'
+      it 'avg に最も近い標準フレームレートに正規化する (59.72 -> 59.94)' do
+        expect(video_with(r_frame_rate: '1000/1', avg_frame_rate: '4870800/81557').frame_rate).to eq '60000/1001'
+      end
+
+      it 'avg に最も近い標準フレームレートに正規化する (23.5 -> 23.976)' do
+        expect(video_with(r_frame_rate: '1000/1', avg_frame_rate: '235/10').frame_rate).to eq '24000/1001'
+      end
     end
 
     context 'avg_frame_rate が取れない (0/0) 素材' do
-      it '30 に正規化する'
+      it 'r_frame_rate をそのまま返す'
     end
   end
 end

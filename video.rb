@@ -38,8 +38,25 @@ class Video
     end
   end
 
-  # "num/den" string to pass to ffmpeg -r
+  # candidates for normalizing a VFR source, as "num/den" strings ffmpeg -r accepts
+  STANDARD_FRAME_RATES = %w[24000/1001 24/1 25/1 30000/1001 30/1 50/1 60000/1001 60/1].freeze
+
+  # "num/den" string to pass to ffmpeg -r. CFR sources (r == avg within 1%)
+  # keep their own rate; VFR sources snap to the standard rate nearest to avg.
   def frame_rate
-    @r_frame_rate
+    r = to_rational(@r_frame_rate)
+    avg = to_rational(@avg_frame_rate)
+    return @r_frame_rate if r.nil? || avg.nil? || (r - avg).abs <= r / 100
+
+    STANDARD_FRAME_RATES.min_by { |candidate| (Rational(candidate) - avg).abs }
+  end
+
+  private
+
+  def to_rational(fraction)
+    value = Rational(fraction)
+    value.positive? ? value : nil
+  rescue ZeroDivisionError, ArgumentError, TypeError
+    nil
   end
 end
