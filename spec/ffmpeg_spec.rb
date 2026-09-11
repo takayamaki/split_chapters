@@ -63,6 +63,13 @@ RSpec.describe FFMpeg do
         expect(described_class.convert_to_win_path('/mnt/windows/d/BDRipping/video.mkv')).to eq 'D:\\BDRipping\\video.mkv'
       end
     end
+
+    context 'WSL ホスト側から見た devcontainer の bind mount (<workspace>/.devcontainer/mnt/windows/<drive>/) 配下のパス' do
+      it 'mnt/windows/<drive>/ より前を捨てて Windows パスに変換する' do
+        expect(described_class.convert_to_win_path('/home/user/ws/.devcontainer/mnt/windows/d/BDRipping/video.mkv'))
+          .to eq 'D:\\BDRipping\\video.mkv'
+      end
+    end
   end
 
   describe '.header' do

@@ -139,8 +139,12 @@ module FFMpeg
       ].join
     end
 
+    # /mnt/<d>/ (WSL), /mnt/windows/<d>/ (inside the devcontainer) and
+    # <workspace>/.devcontainer/mnt/windows/<d>/ (the same bind mount seen from
+    # the WSL host) all map to the Windows drive <D>:\
     def convert_to_win_path(path)
-      path.sub(%r{\A/mnt/(?:windows/)?([a-z])/}) { "#{Regexp.last_match(1).upcase}:\\" }.gsub('/', '\\')
+      path.sub(%r{\A(?:/mnt/([a-z])/|.*?/mnt/windows/([a-z])/)}) { "#{(Regexp.last_match(1) || Regexp.last_match(2)).upcase}:\\" }
+          .gsub('/', '\\')
     end
   end
 end
