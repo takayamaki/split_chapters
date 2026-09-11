@@ -19,6 +19,13 @@ $ ./split_chapters {{path to source video file}} > /mnt/d/encode.bat
 D:\> encode.bat
 ```
 
+複数の動画をまとめて1本の bat にするときは `>>` で単純連結すればよい（各出力は自分の `:encode` を一意なラベルへの `goto` で飛び越えるので、続けて次の出力が実行される）:
+
+``` shell
+$ ./split_chapters disc1.mkv >  /mnt/d/encode.bat
+$ ./split_chapters disc2.mkv >> /mnt/d/encode.bat
+```
+
 ## エンコードの流れ
 
 チャプターごとに bat 内の `:encode` サブルーチンを呼び、次の順で処理する

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'pathname'
+require 'securerandom'
 
 module FFMpeg
   MIN_DURATION = 60
@@ -39,8 +40,13 @@ module FFMpeg
   # worst case costs pass1 + crf + pass2, the same as a plain crf -> 2-pass.
   # ffmpeg >= 6.1 exits with a negative AVERROR code on failure, which
   # "if errorlevel 1" (errorlevel >= 1) does not catch, hence "neq 0".
+  # the subroutine is skipped with a goto to a per-run unique label instead of
+  # exit /b, so several generated bats can be concatenated (>>) into one file
+  # and still run in sequence. duplicated :encode bodies are identical, so it
+  # does not matter which copy a call resolves to.
   FOOTER = <<~'BAT'
-    exit /b 0
+    endlocal
+    goto :end___RUN_ID__
 
 
     rem ==== :encode <src> <ss int> <ss frac> <duration> <dst> <stats file> <fps> ====
@@ -92,6 +98,8 @@ module FFMpeg
     :failed
     echo   [ERROR] encode failed : %~n5
     exit /b 0
+
+    :end___RUN_ID__
   BAT
 
   class << self
@@ -99,8 +107,8 @@ module FFMpeg
       HEADER.lines(chomp: true)
     end
 
-    def footer
-      FOOTER.lines(chomp: true)
+    def footer(run_id: SecureRandom.hex(4))
+      FOOTER.gsub('__RUN_ID__', run_id).lines(chomp: true)
     end
 
     def output_commands(video)

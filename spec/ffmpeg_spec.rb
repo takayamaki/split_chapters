@@ -114,15 +114,30 @@ RSpec.describe FFMpeg do
   describe '.footer' do
     subject(:footer) { described_class.footer }
 
-    it 'call 行の後に実行されないよう exit /b で区切ってから :encode を定義する' do
-      expect(footer.first).to eq 'exit /b 0'
+    it 'call 行の後に実行されないよう :encode を飛び越えてから定義する' do
       expect(footer).to include ':encode'
+      expect(footer.index(':encode')).to be > footer.index { |line| line.start_with?('goto :end_') }
     end
 
     context '複数の出力を >> で1つの bat に連結したとき' do
-      it 'exit /b ではなく一意なラベルへの goto で :encode を飛び越え、末尾にそのラベルを置く'
-      it 'run_id を省略すると呼び出しごとに異なるラベルになる'
-      it 'setlocal を endlocal で閉じてから次の出力に続ける'
+      subject(:footer) { described_class.footer(run_id: 'abc123') }
+
+      it 'exit /b ではなく一意なラベルへの goto で :encode を飛び越え、末尾にそのラベルを置く' do
+        expect(footer.take_while { |line| !line.start_with?('goto :end_') }).not_to include 'exit /b 0'
+        expect(footer).to include 'goto :end_abc123'
+        expect(footer.last).to eq ':end_abc123'
+      end
+
+      it 'run_id を省略すると呼び出しごとに異なるラベルになる' do
+        a = described_class.footer.last
+        b = described_class.footer.last
+        expect(a).to match(/\A:end_[0-9a-f]+\z/)
+        expect(a).not_to eq b
+      end
+
+      it 'setlocal を endlocal で閉じてから次の出力に続ける' do
+        expect(footer.index('endlocal')).to be < footer.index('goto :end_abc123')
+      end
     end
 
     context 'エンコードオプション' do
