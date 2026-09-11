@@ -52,8 +52,22 @@ RSpec.describe FFMpeg do
   end
 
   describe '.header' do
-    it 'echo を切って bat 自身のディレクトリに移動する'
-    it 'CRF / LIMIT / ABRBV / CRFCAP / PROBETHR を set する'
+    subject(:header) { described_class.header }
+
+    it 'echo を切って bat 自身のディレクトリに移動する' do
+      expect(header.first(3)).to eq ['@echo off', 'setlocal', 'cd /d %~dp0']
+    end
+
+    it 'CRF / LIMIT / ABRBV / CRFCAP / PROBETHR を set する' do
+      expect(header).to include(
+        'set "CRF=18"',
+        'set "LIMIT=8320"',
+        'set "ABRBV=8192k"',
+        'set "CRFCAP=-maxrate 20000k -bufsize 40000k"',
+        'set "PROBETHR=7800"',
+        'set /a LIMITBPS=%LIMIT%*1000'
+      )
+    end
   end
 
   describe '.footer' do

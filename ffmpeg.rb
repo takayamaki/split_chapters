@@ -8,7 +8,33 @@ module FFMpeg
   MIN_DURATION = 60
   MAX_DURATION = 600
 
+  HEADER = <<~BAT
+    @echo off
+    setlocal
+    cd /d %~dp0
+
+    rem ==== tunables ==========================================================
+    set "CRF=18"
+    rem  LIMIT : TOTAL container bitrate in kbps (video 8192 + audio 128)
+    set "LIMIT=8320"
+    set "ABRBV=8192k"
+    set "CRFCAP=-maxrate 20000k -bufsize 40000k"
+    rem  PROBETHR : video kbps reported by x264 after the crf pass 1 ("kb/s:").
+    rem             above this the crf attempt is skipped and we go straight to
+    rem             pass 2. pass 1 over-reports by +2..+23% on <8.5Mbps material
+    rem             and under-reports by up to -9% on high bitrate material, so
+    rem             keep ~5% margin below the 8192 video limit.
+    set "PROBETHR=7800"
+    rem ========================================================================
+    set "PROBE=%TEMP%\\split_chapters_probe.txt"
+    set /a LIMITBPS=%LIMIT%*1000
+  BAT
+
   class << self
+    def header
+      HEADER.lines(chomp: true)
+    end
+
     def output_commands(video)
       seq_number_digits = video.chapters.length.to_s.length
       video.chapters.each.with_index(1).map do |chapter, seq_number|
