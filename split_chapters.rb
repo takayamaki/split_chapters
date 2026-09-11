@@ -13,7 +13,7 @@ end
 
 videos = file_paths.map do |path|
   chapters = FFProve.chapters(path)
-  Video.new(path, chapters)
+  Video.new(path, chapters, **FFProve.frame_rates(path))
 end
 
 lines = [

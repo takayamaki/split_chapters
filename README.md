@@ -32,6 +32,16 @@ x264 の pass 1 は rate control 方式に関わらず fast-firstpass で走る�
 
 閾値などは bat 冒頭の tunables（`CRF` / `LIMIT` / `ABRBV` / `CRFCAP` / `PROBETHR`）で変えられる。
 
+## エンコードオプション（VJ 用）
+
+- `-force_key_frames "expr:gte(t,n_forced)"` — 1 秒ごとに I フレームを打つ（VJ ソフトでのシーク・頭出し用）
+- `-x264-params ref=4:bframes=2:b-pyramid=none:level=5.1` — 順方向再生前提の固定値
+- `-profile:v high -pix_fmt yuv420p`
+- `-fps_mode cfr -r <rate>` — CFR 化。レートは生成時に ffprobe で見て決める
+  - `r_frame_rate` と `avg_frame_rate` が 1% 以内で一致していれば `r_frame_rate` をそのまま使う（元を尊重）
+  - それ以上ズレる VFR 素材は `avg_frame_rate` に最も近い標準レート（23.976 / 24 / 25 / 29.97 / 30 / 50 / 59.94 / 60）に丸める
+  - `avg_frame_rate` が取れない場合は `r_frame_rate` を使う
+
 ## FAQ
 ### どうしてLinux(WSL)だけで全て完結するようにしなかったんですか？
 
