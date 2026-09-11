@@ -92,7 +92,12 @@ RSpec.describe FFMpeg do
       expect(header.first(3)).to eq ['@echo off', 'setlocal', 'cd /d %~dp0']
     end
 
-    it 'VBASE (1秒ごとの I フレーム, High profile) と X264OPT (ref=4, bframes=2, b-pyramid none, level 5.1) を set する'
+    it 'VBASE (1秒ごとの I フレーム, High profile) と X264OPT (ref=4, bframes=2, b-pyramid none, level 5.1) を set する' do
+      expect(header).to include(
+        'set "X264OPT=ref=4:bframes=2:b-pyramid=none:level=5.1"',
+        'set "VBASE=-vcodec libx264 -preset veryslow -profile:v high -pix_fmt yuv420p -force_key_frames "expr:gte(t,n_forced)""'
+      )
+    end
 
     it 'CRF / LIMIT / ABRBV / CRFCAP / PROBETHR を set する' do
       expect(header).to include(
