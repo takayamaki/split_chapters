@@ -12,19 +12,32 @@
 
 ## 使い方
 
+```
+Usage: split_chapters [OPTION]... FILE...
+Write a Windows batch file to standard output that encodes each chapter of
+FILE(s) into a separate mp4 (x264 crf 18, or 2-pass abr 8192k when crf 18
+would exceed 8 Mbps).
+
+  -h, --help   display this help and exit
+```
+
 ``` shell
-$ ./split_chapters {{path to source video file}} > /mnt/d/encode.bat
+$ ./split_chapters disc1.mkv disc2.mkv > /mnt/d/encode.bat
 ```
 ``` dos
 D:\> encode.bat
 ```
 
-複数の動画をまとめて1本の bat にするときは `>>` で単純連結すればよい（各出力は自分の `:encode` を一意なラベルへの `goto` で飛び越えるので、続けて次の出力が実行される）:
+出力ファイルはソースと同じディレクトリに `<ソース名>_<連番>.mp4`。60 秒未満・600 秒超のチャプターは `@rem` でコメントアウトした状態で出力する。
+
+複数回に分けて生成したものを `>>` で単純連結してもよい（各出力は自分の `:encode` を一意なラベルへの `goto` で飛び越えるので、続けて次の出力が実行される）:
 
 ``` shell
 $ ./split_chapters disc1.mkv >  /mnt/d/encode.bat
 $ ./split_chapters disc2.mkv >> /mnt/d/encode.bat
 ```
+
+bat は `bin\ffmpeg.exe` / `bin\ffprobe.exe` を自分のディレクトリからの相対で参照するので、`bin\` のある場所に置いて実行する。
 
 ## エンコードの流れ
 

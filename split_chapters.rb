@@ -4,9 +4,36 @@
 require_relative 'video'
 require_relative 'ffmpeg'
 
+USAGE = <<~TEXT
+  Usage: split_chapters [OPTION]... FILE...
+  Write a Windows batch file to standard output that encodes each chapter of
+  FILE(s) into a separate mp4 (x264 crf 18, or 2-pass abr 8192k when crf 18
+  would exceed 8 Mbps).
+
+    -h, --help   display this help and exit
+
+  Output of several runs can be appended (>>) to a single batch file.
+
+  Examples:
+    split_chapters disc1.mkv  > /mnt/d/encode.bat
+    split_chapters disc2.mkv >> /mnt/d/encode.bat
+TEXT
+
+if ARGV.empty?
+  warn USAGE
+  exit 1
+end
+if ARGV.intersect?(%w[-h --help])
+  puts USAGE
+  exit 0
+end
+
 file_paths = ARGV.map do |path|
   absolute_path = File.expand_path(path)
-  raise 'No such file' unless File.exist?(absolute_path)
+  unless File.exist?(absolute_path)
+    warn "split_chapters: cannot access '#{path}': No such file or directory"
+    exit 1
+  end
 
   absolute_path
 end
