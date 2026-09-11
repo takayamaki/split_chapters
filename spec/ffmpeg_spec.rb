@@ -13,6 +13,8 @@ RSpec.describe FFMpeg do
         expect(lines.length).to eq 1
         expect(lines.first).to start_with('call :encode ')
       end
+      it 'CFR 化に使うフレームレートを最後の引数で渡す'
+
       it 'ソースの Windows パス・シーク整数部・シーク小数部・長さ・出力パス・stats ファイル名を引数に渡す' do
         expect(described_class.output_commands(video).first)
           .to eq 'call :encode "D:\\video.mkv" 0 0.0 180.0 "D:\\video_1.mp4" "video.log"'
@@ -88,6 +90,8 @@ RSpec.describe FFMpeg do
       expect(header.first(3)).to eq ['@echo off', 'setlocal', 'cd /d %~dp0']
     end
 
+    it 'VBASE (1秒ごとの I フレーム, High profile) と X264OPT (ref=4, bframes=2, b-pyramid none, level 5.1) を set する'
+
     it 'CRF / LIMIT / ABRBV / CRFCAP / PROBETHR を set する' do
       expect(header).to include(
         'set "CRF=18"',
@@ -106,6 +110,11 @@ RSpec.describe FFMpeg do
     it 'call 行の後に実行されないよう exit /b で区切ってから :encode を定義する' do
       expect(footer.first).to eq 'exit /b 0'
       expect(footer).to include ':encode'
+    end
+
+    context 'エンコードオプション' do
+      it 'pass 1 / crf / pass 2 の3コマンドすべてで -fps_mode cfr -r %7 と %VBASE% を使う'
+      it 'pass 1 と pass 2 は stats と X264OPT を同じ -x264-params に入れ、crf は X264OPT だけ渡す'
     end
 
     context 'pass 1 の probe' do
