@@ -32,6 +32,8 @@ module FFMpeg
   # 2-pass stats: below PROBETHR we try a single crf pass, otherwise (or when
   # the crf output still exceeds LIMIT) pass 2 abr reuses the same stats.
   # worst case costs pass1 + crf + pass2, the same as a plain crf -> 2-pass.
+  # ffmpeg >= 6.1 exits with a negative AVERROR code on failure, which
+  # "if errorlevel 1" (errorlevel >= 1) does not catch, hence "neq 0".
   FOOTER = <<~'BAT'
     exit /b 0
 
@@ -46,7 +48,7 @@ module FFMpeg
     rem  goes to the probe file and no progress is shown during pass 1.
     echo   [1/2] pass 1 (crf %CRF% probe) ...
     bin\ffmpeg.exe -y -hide_banner -loglevel info -nostats -ss %2 -i "%~1" -ss %3 -t %4 -vcodec libx264 -preset veryslow -crf %CRF% %CRFCAP% -an -map 0:v:0 -pix_fmt yuv420p -x264-params stats="%~6" -pass 1 -f null nul 2> "%PROBE%"
-    if errorlevel 1 goto :failed
+    if %errorlevel% neq 0 goto :failed
 
     set "P1K="
     for /f "tokens=2 delims=:" %%k in ('findstr /c:"kb/s:" "%PROBE%"') do set "P1K=%%k"
@@ -60,7 +62,7 @@ module FFMpeg
     :crfpass
     echo   [2/2] probe %P1K% kbps ^<= %PROBETHR% kbps  -^> crf %CRF% ...
     bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -vcodec libx264 -preset veryslow -crf %CRF% %CRFCAP% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -pix_fmt yuv420p -movflags +faststart "%~5"
-    if errorlevel 1 goto :failed
+    if %errorlevel% neq 0 goto :failed
 
     set "BR="
     bin\ffprobe.exe -v error -show_entries format=bit_rate -of default=nw=1:nk=1 "%~5" > "%PROBE%" 2>nul
@@ -76,7 +78,7 @@ module FFMpeg
     if defined BRK echo   [--] %BRK% kbps ^> %LIMIT% kbps  -^> fall back to 2-pass abr
     echo   [2/2] pass 2 abr %ABRBV% ...
     bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -vcodec libx264 -preset veryslow -b:v %ABRBV% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -pix_fmt yuv420p -x264-params stats="%~6" -pass 2 -movflags +faststart "%~5"
-    if errorlevel 1 goto :failed
+    if %errorlevel% neq 0 goto :failed
     echo   [ok ] abr adopted
     exit /b 0
 

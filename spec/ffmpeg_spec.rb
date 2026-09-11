@@ -142,6 +142,14 @@ RSpec.describe FFMpeg do
       end
     end
 
+    context 'ffmpeg が失敗したとき' do
+      it 'ffmpeg 6.1 以降が返す負の終了コードも拾って :failed に飛ぶ' do
+        expect(footer).not_to include 'if errorlevel 1 goto :failed'
+        expect(footer.count('if %errorlevel% neq 0 goto :failed')).to eq 3
+        expect(footer).to include ':failed'
+      end
+    end
+
     context 'crf の結果が LIMIT を超えたとき' do
       it 'pass 2 abr にフォールバックする' do
         expect(footer).to include(
