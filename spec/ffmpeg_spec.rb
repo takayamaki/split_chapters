@@ -79,20 +79,55 @@ RSpec.describe FFMpeg do
     end
 
     context 'pass 1 の probe' do
-      it 'crf の pass 1 を -loglevel info で走らせ stderr をファイルに落とす'
-      it 'x264 の kb/s: 行から整数 kbps を取り出す'
+      it 'crf の pass 1 を -loglevel info で走らせ stderr をファイルに落とす' do
+        pass1 = footer.find { |line| line.include?('-pass 1') }
+        expect(pass1).to start_with 'bin\\ffmpeg.exe -y -hide_banner -loglevel info -nostats -ss %2 -i "%~1" -ss %3 -t %4 '
+        expect(pass1).to include '-preset veryslow -crf %CRF% %CRFCAP% -an -map 0:v:0'
+        expect(pass1).to end_with '-x264-params stats="%~6" -pass 1 -f null nul 2> "%PROBE%"'
+      end
+
+      it 'x264 の kb/s: 行から整数 kbps を取り出す' do
+        expect(footer).to include(
+          %q(for /f "tokens=2 delims=:" %%k in ('findstr /c:"kb/s:" "%PROBE%"') do set "P1K=%%k"),
+          'for /f "tokens=1 delims=. " %%k in ("%P1K%") do set "P1K=%%k"',
+          'if not defined P1K goto :abrpass2'
+        )
+      end
     end
 
     context 'probe が PROBETHR 以下のとき' do
-      it 'crf 単発でエンコードし、ffprobe の bit_rate が LIMIT 以下なら採用する'
+      it 'crf 単発でエンコードし、ffprobe の bit_rate が LIMIT 以下なら採用する' do
+        expect(footer).to include('if %P1K% LEQ %PROBETHR% goto :crfpass', ':crfpass')
+        crf = footer.find { |line| line.include?('-crf %CRF%') && line.include?('-movflags +faststart') }
+        expect(crf).to include '-loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -vcodec libx264 -preset veryslow -crf %CRF% %CRFCAP% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0'
+        expect(crf).to end_with '-movflags +faststart "%~5"'
+        expect(crf).not_to include '-pass'
+        expect(footer).to include(
+          'bin\\ffprobe.exe -v error -show_entries format=bit_rate -of default=nw=1:nk=1 "%~5" > "%PROBE%" 2>nul',
+          'echo   [ok ] %BRK% kbps ^<= %LIMIT% kbps  -^> adopt crf'
+        )
+      end
     end
 
     context 'probe が PROBETHR を超えたとき' do
-      it 'crf を飛ばして同じ stats で pass 2 abr を走らせる'
+      it 'crf を飛ばして同じ stats で pass 2 abr を走らせる' do
+        leq = footer.index('if %P1K% LEQ %PROBETHR% goto :crfpass')
+        expect(footer[leq + 2]).to eq 'goto :abrpass2'
+        expect(footer).to include ':abrpass2'
+        pass2 = footer.find { |line| line.include?('-pass 2') }
+        expect(pass2).to include '-preset veryslow -b:v %ABRBV% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0'
+        expect(pass2).to end_with '-x264-params stats="%~6" -pass 2 -movflags +faststart "%~5"'
+        expect(footer).not_to include(a_string_matching(/-b:v %ABRBV%.*-pass 1/))
+      end
     end
 
     context 'crf の結果が LIMIT を超えたとき' do
-      it 'pass 2 abr にフォールバックする'
+      it 'pass 2 abr にフォールバックする' do
+        expect(footer).to include(
+          'if %BR% GTR %LIMITBPS% goto :abrpass2',
+          'if defined BRK echo   [--] %BRK% kbps ^> %LIMIT% kbps  -^> fall back to 2-pass abr'
+        )
+      end
     end
   end
 end
