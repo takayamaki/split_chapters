@@ -119,6 +119,12 @@ RSpec.describe FFMpeg do
       expect(footer).to include ':encode'
     end
 
+    context '複数の出力を >> で1つの bat に連結したとき' do
+      it 'exit /b ではなく一意なラベルへの goto で :encode を飛び越え、末尾にそのラベルを置く'
+      it 'run_id を省略すると呼び出しごとに異なるラベルになる'
+      it 'setlocal を endlocal で閉じてから次の出力に続ける'
+    end
+
     context 'エンコードオプション' do
       let(:commands) { footer.grep(/^bin\\ffmpeg\.exe /) }
 
