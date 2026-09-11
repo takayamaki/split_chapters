@@ -25,8 +25,10 @@ class Video
 
   attr_reader :chapters, :file_path
 
-  def initialize(file_path, chapters)
+  def initialize(file_path, chapters, r_frame_rate: nil, avg_frame_rate: nil)
     @file_path = file_path
+    @r_frame_rate = r_frame_rate
+    @avg_frame_rate = avg_frame_rate
     @chapters = chapters.map do |chapter|
       Chapter.new(
         start_at: chapter[:start],
@@ -34,5 +36,10 @@ class Video
         time_base: chapter[:time_base]
       )
     end
+  end
+
+  # "num/den" string to pass to ffmpeg -r
+  def frame_rate
+    @r_frame_rate
   end
 end
