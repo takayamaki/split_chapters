@@ -51,6 +51,15 @@ RSpec.describe FFMpeg do
     end
   end
 
+  describe '.remove_2pass_log_commands' do
+    it 'stats ファイルと mbtree を、存在するときだけ削除する' do
+      expect(described_class.remove_2pass_log_commands('/mnt/d/video.mkv')).to eq [
+        'if exist "video.log" del "video.log"',
+        'if exist "video.log.mbtree" del "video.log.mbtree"'
+      ]
+    end
+  end
+
   describe '.convert_to_win_path' do
     context 'WSL 標準の /mnt/<drive>/ 配下のパス' do
       it 'ドライブレターと \\ 区切りの Windows パスに変換する' do

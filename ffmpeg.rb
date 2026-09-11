@@ -106,10 +106,9 @@ module FFMpeg
     end
 
     def remove_2pass_log_commands(src_path)
-      [
-        "del \"#{stats_file_name(src_path)}\"",
-        "del \"#{stats_file_name(src_path)}.mbtree\""
-      ]
+      [stats_file_name(src_path), "#{stats_file_name(src_path)}.mbtree"].map do |file|
+        "if exist \"#{file}\" del \"#{file}\""
+      end
     end
 
     # call :encode <src> <ss int> <ss frac> <duration> <dst> <stats file>
