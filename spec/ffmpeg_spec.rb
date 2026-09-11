@@ -71,7 +71,12 @@ RSpec.describe FFMpeg do
   end
 
   describe '.footer' do
-    it 'call 行の後に実行されないよう exit /b で区切ってから :encode を定義する'
+    subject(:footer) { described_class.footer }
+
+    it 'call 行の後に実行されないよう exit /b で区切ってから :encode を定義する' do
+      expect(footer.first).to eq 'exit /b 0'
+      expect(footer).to include ':encode'
+    end
 
     context 'pass 1 の probe' do
       it 'crf の pass 1 を -loglevel info で走らせ stderr をファイルに落とす'

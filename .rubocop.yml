@@ -24,3 +24,7 @@ Metrics/MethodLength:
 Metrics/BlockLength:
   Exclude:
     - spec/**/*
+
+Metrics/ModuleLength:
+  CountAsOne:
+    - heredoc

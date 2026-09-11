@@ -30,9 +30,70 @@ module FFMpeg
     set /a LIMITBPS=%LIMIT%*1000
   BAT
 
+  # :encode subroutine. pass 1 (crf) doubles as the bitrate probe and as the
+  # 2-pass stats: below PROBETHR we try a single crf pass, otherwise (or when
+  # the crf output still exceeds LIMIT) pass 2 abr reuses the same stats.
+  # worst case costs pass1 + crf + pass2, the same as a plain crf -> 2-pass.
+  FOOTER = <<~'BAT'
+    exit /b 0
+
+
+    rem ==== :encode <src> <ss int> <ss frac> <duration> <dst> <stats file> ====
+    :encode
+    echo.
+    echo ==== %~n5
+    set "BRK="
+
+    rem  the "kb/s:" summary line is only printed at -loglevel info, so stderr
+    rem  goes to the probe file and no progress is shown during pass 1.
+    echo   [1/2] pass 1 (crf %CRF% probe) ...
+    bin\ffmpeg.exe -y -hide_banner -loglevel info -nostats -ss %2 -i "%~1" -ss %3 -t %4 -vcodec libx264 -preset veryslow -crf %CRF% %CRFCAP% -an -map 0:v:0 -pix_fmt yuv420p -x264-params stats="%~6" -pass 1 -f null nul 2> "%PROBE%"
+    if errorlevel 1 goto :failed
+
+    set "P1K="
+    for /f "tokens=2 delims=:" %%k in ('findstr /c:"kb/s:" "%PROBE%"') do set "P1K=%%k"
+    for /f "tokens=1 delims=. " %%k in ("%P1K%") do set "P1K=%%k"
+    if not defined P1K goto :abrpass2
+    echo %P1K%| findstr /r "^[0-9][0-9]*$" >nul || goto :abrpass2
+    if %P1K% LEQ %PROBETHR% goto :crfpass
+    echo   [--] probe %P1K% kbps ^> %PROBETHR% kbps  -^> skip crf, 2-pass abr
+    goto :abrpass2
+
+    :crfpass
+    echo   [2/2] probe %P1K% kbps ^<= %PROBETHR% kbps  -^> crf %CRF% ...
+    bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -vcodec libx264 -preset veryslow -crf %CRF% %CRFCAP% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -pix_fmt yuv420p -movflags +faststart "%~5"
+    if errorlevel 1 goto :failed
+
+    set "BR="
+    bin\ffprobe.exe -v error -show_entries format=bit_rate -of default=nw=1:nk=1 "%~5" > "%PROBE%" 2>nul
+    set /p BR=<"%PROBE%"
+    if not defined BR goto :abrpass2
+    echo %BR%| findstr /r "^[0-9][0-9]*$" >nul || goto :abrpass2
+    set /a BRK=%BR%/1000
+    if %BR% GTR %LIMITBPS% goto :abrpass2
+    echo   [ok ] %BRK% kbps ^<= %LIMIT% kbps  -^> adopt crf
+    exit /b 0
+
+    :abrpass2
+    if defined BRK echo   [--] %BRK% kbps ^> %LIMIT% kbps  -^> fall back to 2-pass abr
+    echo   [2/2] pass 2 abr %ABRBV% ...
+    bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -vcodec libx264 -preset veryslow -b:v %ABRBV% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -pix_fmt yuv420p -x264-params stats="%~6" -pass 2 -movflags +faststart "%~5"
+    if errorlevel 1 goto :failed
+    echo   [ok ] abr adopted
+    exit /b 0
+
+    :failed
+    echo   [ERROR] encode failed : %~n5
+    exit /b 0
+  BAT
+
   class << self
     def header
       HEADER.lines(chomp: true)
+    end
+
+    def footer
+      FOOTER.lines(chomp: true)
     end
 
     def output_commands(video)
