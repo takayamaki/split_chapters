@@ -140,7 +140,7 @@ module FFMpeg
     end
 
     def convert_to_win_path(path)
-      path.sub(%r{/mnt/([a-z])/}) { "#{Regexp.last_match(1).upcase}:\\" }.gsub('/', '\\')
+      path.sub(%r{\A/mnt/(?:windows/)?([a-z])/}) { "#{Regexp.last_match(1).upcase}:\\" }.gsub('/', '\\')
     end
   end
 end

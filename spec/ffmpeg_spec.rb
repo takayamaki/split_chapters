@@ -51,6 +51,20 @@ RSpec.describe FFMpeg do
     end
   end
 
+  describe '.convert_to_win_path' do
+    context 'WSL 標準の /mnt/<drive>/ 配下のパス' do
+      it 'ドライブレターと \\ 区切りの Windows パスに変換する' do
+        expect(described_class.convert_to_win_path('/mnt/d/BDRipping/video.mkv')).to eq 'D:\\BDRipping\\video.mkv'
+      end
+    end
+
+    context 'devcontainer で /mnt/windows/<drive>/ にマウントされたパス' do
+      it '同じく Windows パスに変換する' do
+        expect(described_class.convert_to_win_path('/mnt/windows/d/BDRipping/video.mkv')).to eq 'D:\\BDRipping\\video.mkv'
+      end
+    end
+  end
+
   describe '.header' do
     subject(:header) { described_class.header }
 
