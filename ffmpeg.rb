@@ -43,7 +43,9 @@ module FFMpeg
     exit /b 0
 
 
-    rem ==== :encode <src> <ss int> <ss frac> <duration> <dst> <stats file> ====
+    rem ==== :encode <src> <ss int> <ss frac> <duration> <dst> <stats file> <fps> ====
+    rem  -fps_mode cfr -r / -force_key_frames must be identical in pass 1 and pass 2,
+    rem  otherwise the frame count differs from the stats file and pass 2 fails.
     :encode
     echo.
     echo ==== %~n5
@@ -52,7 +54,7 @@ module FFMpeg
     rem  the "kb/s:" summary line is only printed at -loglevel info, so stderr
     rem  goes to the probe file and no progress is shown during pass 1.
     echo   [1/2] pass 1 (crf %CRF% probe) ...
-    bin\ffmpeg.exe -y -hide_banner -loglevel info -nostats -ss %2 -i "%~1" -ss %3 -t %4 -vcodec libx264 -preset veryslow -crf %CRF% %CRFCAP% -an -map 0:v:0 -pix_fmt yuv420p -x264-params stats="%~6" -pass 1 -f null nul 2> "%PROBE%"
+    bin\ffmpeg.exe -y -hide_banner -loglevel info -nostats -ss %2 -i "%~1" -ss %3 -t %4 -fps_mode cfr -r %7 %VBASE% -crf %CRF% %CRFCAP% -an -map 0:v:0 -x264-params "stats=%~6:%X264OPT%" -pass 1 -f null nul 2> "%PROBE%"
     if %errorlevel% neq 0 goto :failed
 
     set "P1K="
@@ -66,7 +68,7 @@ module FFMpeg
 
     :crfpass
     echo   [2/2] probe %P1K% kbps ^<= %PROBETHR% kbps  -^> crf %CRF% ...
-    bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -vcodec libx264 -preset veryslow -crf %CRF% %CRFCAP% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -pix_fmt yuv420p -movflags +faststart "%~5"
+    bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -fps_mode cfr -r %7 %VBASE% -crf %CRF% %CRFCAP% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -x264-params "%X264OPT%" -movflags +faststart "%~5"
     if %errorlevel% neq 0 goto :failed
 
     set "BR="
@@ -82,7 +84,7 @@ module FFMpeg
     :abrpass2
     if defined BRK echo   [--] %BRK% kbps ^> %LIMIT% kbps  -^> fall back to 2-pass abr
     echo   [2/2] pass 2 abr %ABRBV% ...
-    bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -vcodec libx264 -preset veryslow -b:v %ABRBV% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -pix_fmt yuv420p -x264-params stats="%~6" -pass 2 -movflags +faststart "%~5"
+    bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -fps_mode cfr -r %7 %VBASE% -b:v %ABRBV% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -x264-params "stats=%~6:%X264OPT%" -pass 2 -movflags +faststart "%~5"
     if %errorlevel% neq 0 goto :failed
     echo   [ok ] abr adopted
     exit /b 0

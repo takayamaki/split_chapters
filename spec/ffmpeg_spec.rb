@@ -120,16 +120,29 @@ RSpec.describe FFMpeg do
     end
 
     context 'エンコードオプション' do
-      it 'pass 1 / crf / pass 2 の3コマンドすべてで -fps_mode cfr -r %7 と %VBASE% を使う'
-      it 'pass 1 と pass 2 は stats と X264OPT を同じ -x264-params に入れ、crf は X264OPT だけ渡す'
+      let(:commands) { footer.grep(/^bin\\ffmpeg\.exe /) }
+
+      it 'pass 1 / crf / pass 2 の3コマンドすべてで -fps_mode cfr -r %7 と %VBASE% を使う' do
+        expect(commands.length).to eq 3
+        commands.each do |command|
+          expect(command).to include '-ss %2 -i "%~1" -ss %3 -t %4 -fps_mode cfr -r %7 %VBASE% '
+        end
+      end
+
+      it 'pass 1 と pass 2 は stats と X264OPT を同じ -x264-params に入れ、crf は X264OPT だけ渡す' do
+        pass1, crf, pass2 = commands
+        expect(pass1).to include '-x264-params "stats=%~6:%X264OPT%" -pass 1'
+        expect(crf).to include '-x264-params "%X264OPT%" -movflags +faststart'
+        expect(pass2).to include '-x264-params "stats=%~6:%X264OPT%" -pass 2'
+      end
     end
 
     context 'pass 1 の probe' do
       it 'crf の pass 1 を -loglevel info で走らせ stderr をファイルに落とす' do
         pass1 = footer.find { |line| line.include?('-pass 1') }
         expect(pass1).to start_with 'bin\\ffmpeg.exe -y -hide_banner -loglevel info -nostats -ss %2 -i "%~1" -ss %3 -t %4 '
-        expect(pass1).to include '-preset veryslow -crf %CRF% %CRFCAP% -an -map 0:v:0'
-        expect(pass1).to end_with '-x264-params stats="%~6" -pass 1 -f null nul 2> "%PROBE%"'
+        expect(pass1).to include '%VBASE% -crf %CRF% %CRFCAP% -an -map 0:v:0'
+        expect(pass1).to end_with '-x264-params "stats=%~6:%X264OPT%" -pass 1 -f null nul 2> "%PROBE%"'
       end
 
       it 'x264 の kb/s: 行から整数 kbps を取り出す' do
@@ -145,7 +158,7 @@ RSpec.describe FFMpeg do
       it 'crf 単発でエンコードし、ffprobe の bit_rate が LIMIT 以下なら採用する' do
         expect(footer).to include('if %P1K% LEQ %PROBETHR% goto :crfpass', ':crfpass')
         crf = footer.find { |line| line.include?('-crf %CRF%') && line.include?('-movflags +faststart') }
-        expect(crf).to include '-loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -vcodec libx264 -preset veryslow -crf %CRF% %CRFCAP% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0'
+        expect(crf).to include '-loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -fps_mode cfr -r %7 %VBASE% -crf %CRF% %CRFCAP% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0'
         expect(crf).to end_with '-movflags +faststart "%~5"'
         expect(crf).not_to include '-pass'
         expect(footer).to include(
@@ -161,8 +174,8 @@ RSpec.describe FFMpeg do
         expect(footer[leq + 2]).to eq 'goto :abrpass2'
         expect(footer).to include ':abrpass2'
         pass2 = footer.find { |line| line.include?('-pass 2') }
-        expect(pass2).to include '-preset veryslow -b:v %ABRBV% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0'
-        expect(pass2).to end_with '-x264-params stats="%~6" -pass 2 -movflags +faststart "%~5"'
+        expect(pass2).to include '%VBASE% -b:v %ABRBV% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0'
+        expect(pass2).to end_with '-x264-params "stats=%~6:%X264OPT%" -pass 2 -movflags +faststart "%~5"'
         expect(footer).not_to include(a_string_matching(/-b:v %ABRBV%.*-pass 1/))
       end
     end
