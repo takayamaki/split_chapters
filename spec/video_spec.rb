@@ -31,7 +31,9 @@ RSpec.describe Video do
     end
 
     context 'avg_frame_rate が取れない (0/0) 素材' do
-      it 'r_frame_rate をそのまま返す'
+      it 'r_frame_rate をそのまま返す' do
+        expect(video_with(r_frame_rate: '30000/1001', avg_frame_rate: '0/0').frame_rate).to eq '30000/1001'
+      end
     end
   end
 end
