@@ -100,7 +100,7 @@ module FFMpeg
       seq_number_digits = video.chapters.length.to_s.length
       video.chapters.each.with_index(1).map do |chapter, seq_number|
         formatted_seq_number = format("%0#{seq_number_digits}d", seq_number)
-        command = encode_call(chapter, video.file_path, formatted_seq_number)
+        command = encode_call(video, chapter, formatted_seq_number)
         (MIN_DURATION..MAX_DURATION).include?(chapter.duration) ? command : "@rem #{command}"
       end
     end
@@ -111,8 +111,9 @@ module FFMpeg
       end
     end
 
-    # call :encode <src> <ss int> <ss frac> <duration> <dst> <stats file>
-    def encode_call(chapter, path, seq_number)
+    # call :encode <src> <ss int> <ss frac> <duration> <dst> <stats file> <fps>
+    def encode_call(video, chapter, seq_number)
+      path = video.file_path
       [
         'call :encode',
         "\"#{convert_to_win_path(path)}\"",
@@ -120,7 +121,8 @@ module FFMpeg
         chapter.start_at_fractional_part.to_f,
         chapter.duration.to_f,
         "\"#{convert_to_win_path(build_output_path(path, seq_number))}\"",
-        "\"#{stats_file_name(path)}\""
+        "\"#{stats_file_name(path)}\"",
+        video.frame_rate
       ].join(' ')
     end
 

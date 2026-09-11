@@ -6,32 +6,34 @@ require_relative '../video'
 RSpec.describe FFMpeg do
   describe '.output_commands' do
     context '60〜600秒のチャプターが1つある動画' do
-      let(:video) { Video.new('/mnt/d/video.mkv', [{ start: 0, end: 180_000, time_base: '1/1000' }]) }
+      let(:video) { Video.new('/mnt/d/video.mkv', [{ start: 0, end: 180_000, time_base: '1/1000' }], r_frame_rate: '24/1', avg_frame_rate: '24/1') }
 
       it ':encode サブルーチンを call する行を1行返す' do
         lines = described_class.output_commands(video)
         expect(lines.length).to eq 1
         expect(lines.first).to start_with('call :encode ')
       end
-      it 'CFR 化に使うフレームレートを最後の引数で渡す'
+      it 'CFR 化に使うフレームレートを最後の引数で渡す' do
+        expect(described_class.output_commands(video).first).to end_with ' "video.log" 24/1'
+      end
 
       it 'ソースの Windows パス・シーク整数部・シーク小数部・長さ・出力パス・stats ファイル名を引数に渡す' do
         expect(described_class.output_commands(video).first)
-          .to eq 'call :encode "D:\\video.mkv" 0 0.0 180.0 "D:\\video_1.mp4" "video.log"'
+          .to eq 'call :encode "D:\\video.mkv" 0 0.0 180.0 "D:\\video_1.mp4" "video.log" 24/1'
       end
     end
 
     context 'チャプターが複数ある動画' do
       let(:video) do
         chapters = Array.new(10) { |i| { start: i * 100_000, end: (i + 1) * 100_000, time_base: '1/1000' } }
-        Video.new('/mnt/d/video.mkv', chapters)
+        Video.new('/mnt/d/video.mkv', chapters, r_frame_rate: '30000/1001', avg_frame_rate: '30000/1001')
       end
 
       it 'チャプター数の桁数で連番をゼロ埋めした出力ファイル名を渡す' do
         lines = described_class.output_commands(video)
         expect(lines.length).to eq 10
         expect(lines[0]).to include '"D:\\video_01.mp4"'
-        expect(lines[9]).to eq 'call :encode "D:\\video.mkv" 900 0.0 100.0 "D:\\video_10.mp4" "video.log"'
+        expect(lines[9]).to eq 'call :encode "D:\\video.mkv" 900 0.0 100.0 "D:\\video_10.mp4" "video.log" 30000/1001'
       end
     end
 
@@ -41,13 +43,13 @@ RSpec.describe FFMpeg do
                     { start: 0, end: 5_000, time_base: '1/1000' },
                     { start: 5_000, end: 185_500, time_base: '1/1000' },
                     { start: 185_500, end: 900_000, time_base: '1/1000' }
-                  ])
+                  ], r_frame_rate: '24/1', avg_frame_rate: '24/1')
       end
 
       it 'そのチャプターの call 行だけ @rem でコメントアウトする' do
         lines = described_class.output_commands(video)
         expect(lines[0]).to start_with '@rem call :encode '
-        expect(lines[1]).to eq 'call :encode "D:\\video.mkv" 5 0.0 180.5 "D:\\video_2.mp4" "video.log"'
+        expect(lines[1]).to eq 'call :encode "D:\\video.mkv" 5 0.0 180.5 "D:\\video_2.mp4" "video.log" 24/1'
         expect(lines[2]).to start_with '@rem call :encode '
       end
     end
