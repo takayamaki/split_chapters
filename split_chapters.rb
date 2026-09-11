@@ -1,8 +1,8 @@
 #!/bin/env ruby
 # frozen_string_literal: true
 
-require_relative './video'
-require_relative './ffmpeg'
+require_relative 'video'
+require_relative 'ffmpeg'
 
 file_paths = ARGV.map do |path|
   absolute_path = File.expand_path(path)

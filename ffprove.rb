@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative './video'
+require_relative 'video'
 require 'json'
 
 module FFProve

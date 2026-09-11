@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative './ffprove'
+require_relative 'ffprove'
 
 class Video
   class Chapter

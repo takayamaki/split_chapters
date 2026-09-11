@@ -27,7 +27,7 @@ module FFMpeg
       src_path = Pathname(src_path)
       [
         "del \"#{src_path.basename(src_path.extname)}.log\"",
-        "del \"#{src_path.basename(src_path.extname)}.log.mbtree\"",
+        "del \"#{src_path.basename(src_path.extname)}.log.mbtree\""
       ]
     end
 
