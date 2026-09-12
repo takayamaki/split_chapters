@@ -149,7 +149,7 @@ RSpec.describe FFMpeg do
     end
 
     context 'エンコードオプション' do
-      let(:commands) { footer.grep(/^bin\\ffmpeg\.exe /) }
+      let(:commands) { footer.grep(/bin\\ffmpeg\.exe /) }
 
       it 'pass 1 / crf / pass 2 の3コマンドすべてで -fps_mode cfr -r %7 と %VBASE% を使う' do
         expect(commands.length).to eq 3
@@ -166,10 +166,19 @@ RSpec.describe FFMpeg do
       end
     end
 
+    context 'プロセス優先度' do
+      it 'ffmpeg は 3 本とも start /low /b /wait で低優先度・同じコンソール・終了待ちで起動する（ffprobe はそのまま）' do
+        ffmpegs = footer.select { |line| line.include?('ffmpeg.exe') }
+        expect(ffmpegs.length).to eq 3
+        ffmpegs.each { |line| expect(line).to start_with 'start /low /b /wait "" bin\\ffmpeg.exe ' }
+        expect(footer.select { |line| line.include?('ffprobe.exe') }).to all(start_with('bin\\ffprobe.exe '))
+      end
+    end
+
     context 'pass 1 の probe' do
       it 'crf の pass 1 を -loglevel info で走らせ stderr をファイルに落とす' do
         pass1 = footer.find { |line| line.include?('-pass 1') }
-        expect(pass1).to start_with 'bin\\ffmpeg.exe -y -hide_banner -loglevel info -nostats -ss %2 -i "%~1" -ss %3 -t %4 '
+        expect(pass1).to start_with 'start /low /b /wait "" bin\\ffmpeg.exe -y -hide_banner -loglevel info -nostats -ss %2 -i "%~1" -ss %3 -t %4 '
         expect(pass1).to include '%VBASE% -crf %CRF% %CRFCAP% -an -map 0:v:0'
         expect(pass1).to end_with '-x264-params "stats=%~6:%X264OPT%" -pass 1 -f null nul 2> "%PROBE%"'
       end

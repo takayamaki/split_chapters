@@ -45,6 +45,10 @@ module FFMpeg
   # exit /b, so several generated bats can be concatenated (>>) into one file
   # and still run in sequence. duplicated :encode bodies are identical, so it
   # does not matter which copy a call resolves to.
+  # ffmpeg runs at low priority via "start /low /b /wait": /b keeps it in the
+  # same console (so -stats progress and the 2> redirection still work),
+  # /wait makes %errorlevel% the child's exit code. Ctrl+C is ignored by a /b
+  # child; use Ctrl+Break to abort.
   FOOTER = <<~'BAT'
     if exist "%PROBE%" del "%PROBE%"
     endlocal
@@ -62,7 +66,7 @@ module FFMpeg
     rem  the "kb/s:" summary line is only printed at -loglevel info, so stderr
     rem  goes to the probe file and no progress is shown during pass 1.
     echo   [1/2] pass 1 (crf %CRF% probe) ...
-    bin\ffmpeg.exe -y -hide_banner -loglevel info -nostats -ss %2 -i "%~1" -ss %3 -t %4 -fps_mode cfr -r %7 %VBASE% -crf %CRF% %CRFCAP% -an -map 0:v:0 -x264-params "stats=%~6:%X264OPT%" -pass 1 -f null nul 2> "%PROBE%"
+    start /low /b /wait "" bin\ffmpeg.exe -y -hide_banner -loglevel info -nostats -ss %2 -i "%~1" -ss %3 -t %4 -fps_mode cfr -r %7 %VBASE% -crf %CRF% %CRFCAP% -an -map 0:v:0 -x264-params "stats=%~6:%X264OPT%" -pass 1 -f null nul 2> "%PROBE%"
     if %errorlevel% neq 0 goto :failed
 
     set "P1K="
@@ -76,7 +80,7 @@ module FFMpeg
 
     :crfpass
     echo   [2/2] probe %P1K% kbps ^<= %PROBETHR% kbps  -^> crf %CRF% ...
-    bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -fps_mode cfr -r %7 %VBASE% -crf %CRF% %CRFCAP% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -x264-params "%X264OPT%" -movflags +faststart "%~5"
+    start /low /b /wait "" bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -fps_mode cfr -r %7 %VBASE% -crf %CRF% %CRFCAP% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -x264-params "%X264OPT%" -movflags +faststart "%~5"
     if %errorlevel% neq 0 goto :failed
 
     set "BR="
@@ -92,7 +96,7 @@ module FFMpeg
     :abrpass2
     if defined BRK echo   [--] %BRK% kbps ^> %LIMIT% kbps  -^> fall back to 2-pass abr
     echo   [2/2] pass 2 abr %ABRBV% ...
-    bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -fps_mode cfr -r %7 %VBASE% -b:v %ABRBV% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -x264-params "stats=%~6:%X264OPT%" -pass 2 -movflags +faststart "%~5"
+    start /low /b /wait "" bin\ffmpeg.exe -y -hide_banner -loglevel error -stats -ss %2 -i "%~1" -ss %3 -t %4 -fps_mode cfr -r %7 %VBASE% -b:v %ABRBV% -acodec aac -b:a 128k -map 0:v:0 -map 0:a:0 -x264-params "stats=%~6:%X264OPT%" -pass 2 -movflags +faststart "%~5"
     if %errorlevel% neq 0 goto :failed
     echo   [ok ] abr adopted
     exit /b 0

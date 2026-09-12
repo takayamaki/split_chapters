@@ -38,6 +38,7 @@ $ ./split_chapters disc2.mkv >> /mnt/d/encode.bat
 ```
 
 bat は `bin\ffmpeg.exe` / `bin\ffprobe.exe` を自分のディレクトリからの相対で参照するので、`bin\` のある場所に置いて実行する。
+ffmpeg は `start /low /b /wait` で低優先度（Low）で起動する。`/b` の子プロセスは Ctrl+C を無視するので、途中で止めるときは **Ctrl+Break**。
 
 ## エンコードの流れ
 
