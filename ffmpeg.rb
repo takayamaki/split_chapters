@@ -127,7 +127,8 @@ module FFMpeg
     end
 
     def remove_2pass_log_commands(src_path)
-      [stats_file_name(src_path), "#{stats_file_name(src_path)}.mbtree"].map do |file|
+      stats = convert_to_win_path(stats_file_path(src_path))
+      [stats, "#{stats}.mbtree"].map do |file|
         "if exist \"#{file}\" del \"#{file}\""
       end
     end
@@ -142,14 +143,23 @@ module FFMpeg
         chapter.start_at_fractional_part.to_f,
         chapter.duration.to_f,
         "\"#{convert_to_win_path(build_output_path(path, seq_number))}\"",
-        "\"#{stats_file_name(path)}\"",
+        "\"#{x264_stats_param(path)}\"",
         video.frame_rate
       ].join(' ')
     end
 
-    def stats_file_name(src_path)
+    # the stats file sits next to the source, so that two bats encoding
+    # same-named sources in different directories do not fight over it
+    def stats_file_path(src_path)
       src_path = Pathname(src_path)
-      "#{src_path.basename(src_path.extname)}.log"
+      src_path.sub_ext('.log').to_s
+    end
+
+    # the value of stats= inside -x264-params, which ffmpeg splits on ":" and
+    # unescapes with "\": the drive letter colon is escaped and the directory
+    # separator is "/" so that no backslash of the path is taken as an escape
+    def x264_stats_param(src_path)
+      convert_to_win_path(stats_file_path(src_path)).gsub('\\', '/').sub(':', '\\:')
     end
 
     def build_output_path(src_path, seq_number)

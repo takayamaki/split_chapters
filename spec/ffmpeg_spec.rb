@@ -14,12 +14,12 @@ RSpec.describe FFMpeg do
         expect(lines.first).to start_with('call :encode ')
       end
       it 'CFR 化に使うフレームレートを最後の引数で渡す' do
-        expect(described_class.output_commands(video).first).to end_with ' "video.log" 24/1'
+        expect(described_class.output_commands(video).first).to end_with ' "D\\:/video.log" 24/1'
       end
 
       it 'ソースの Windows パス・シーク整数部・シーク小数部・長さ・出力パス・stats ファイル名を引数に渡す' do
         expect(described_class.output_commands(video).first)
-          .to eq 'call :encode "D:\\video.mkv" 0 0.0 180.0 "D:\\video_1.mp4" "video.log" 24/1'
+          .to eq 'call :encode "D:\\video.mkv" 0 0.0 180.0 "D:\\video_1.mp4" "D\\:/video.log" 24/1'
       end
     end
 
@@ -33,7 +33,21 @@ RSpec.describe FFMpeg do
         lines = described_class.output_commands(video)
         expect(lines.length).to eq 10
         expect(lines[0]).to include '"D:\\video_01.mp4"'
-        expect(lines[9]).to eq 'call :encode "D:\\video.mkv" 900 0.0 100.0 "D:\\video_10.mp4" "video.log" 30000/1001'
+        expect(lines[9]).to eq 'call :encode "D:\\video.mkv" 900 0.0 100.0 "D:\\video_10.mp4" "D\\:/video.log" 30000/1001'
+      end
+    end
+
+    context 'サブディレクトリにあるソース' do
+      let(:video) { Video.new('/mnt/d/BDRipping/disc1/video.mkv', [{ start: 0, end: 180_000, time_base: '1/1000' }], r_frame_rate: '24/1', avg_frame_rate: '24/1') }
+
+      it 'stats ファイルをソースと同じディレクトリに置く（同名ソースの並行エンコードで stats を取り合わないように）' do
+        expect(described_class.output_commands(video).first).to include ' "D\\:/BDRipping/disc1/video.log" '
+      end
+
+      it 'x264-params の区切りと衝突するドライブレターの : を \\ でエスケープし、\\ がエスケープに食われないようディレクトリ区切りは / にする' do
+        stats = described_class.output_commands(video).first.split[-2]
+        expect(stats).not_to match(/[^\\]:/)
+        expect(stats).not_to include '\\\\'
       end
     end
 
@@ -49,17 +63,17 @@ RSpec.describe FFMpeg do
       it 'そのチャプターの call 行だけ @rem でコメントアウトする' do
         lines = described_class.output_commands(video)
         expect(lines[0]).to start_with '@rem call :encode '
-        expect(lines[1]).to eq 'call :encode "D:\\video.mkv" 5 0.0 180.5 "D:\\video_2.mp4" "video.log" 24/1'
+        expect(lines[1]).to eq 'call :encode "D:\\video.mkv" 5 0.0 180.5 "D:\\video_2.mp4" "D\\:/video.log" 24/1'
         expect(lines[2]).to start_with '@rem call :encode '
       end
     end
   end
 
   describe '.remove_2pass_log_commands' do
-    it 'stats ファイルと mbtree を、存在するときだけ削除する' do
-      expect(described_class.remove_2pass_log_commands('/mnt/d/video.mkv')).to eq [
-        'if exist "video.log" del "video.log"',
-        'if exist "video.log.mbtree" del "video.log.mbtree"'
+    it 'ソースと同じディレクトリの stats ファイルと mbtree を、存在するときだけ削除する（cmd 向けなので : はエスケープしない）' do
+      expect(described_class.remove_2pass_log_commands('/mnt/d/BDRipping/disc1/video.mkv')).to eq [
+        'if exist "D:\\BDRipping\\disc1\\video.log" del "D:\\BDRipping\\disc1\\video.log"',
+        'if exist "D:\\BDRipping\\disc1\\video.log.mbtree" del "D:\\BDRipping\\disc1\\video.log.mbtree"'
       ]
     end
   end
