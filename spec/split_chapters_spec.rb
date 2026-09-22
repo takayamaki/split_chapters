@@ -34,6 +34,18 @@ RSpec.describe 'split_chapters.rb' do
     end
   end
 
+  context '--min-duration 0 を渡したとき' do
+    it '60秒未満のチャプターも @rem なしで出す（テストクリップは 1 秒チャプター）' do
+      Dir.mktmpdir do |dir|
+        a = make_chaptered_clip(dir, 'a')
+        out, err, status = run('--min-duration', '0', a)
+        expect(status.exitstatus).to eq(0), err
+        expect(out.lines.grep(/^call :encode /).length).to eq 2
+        expect(out.lines.grep(/^@rem call :encode /)).to be_empty
+      end
+    end
+  end
+
   context '引数なしで実行したとき' do
     it '標準エラーに usage を出して終了コード 1 で終わる' do
       out, err, status = run

@@ -60,11 +60,21 @@ RSpec.describe FFMpeg do
                   ], r_frame_rate: '24/1', avg_frame_rate: '24/1')
       end
 
-      it 'そのチャプターの call 行だけ @rem でコメントアウトする' do
+      it '既定では 60秒未満だけ @rem でコメントアウトし、600秒超は MC と一緒になった曲を落とさないようそのまま出す' do
         lines = described_class.output_commands(video)
         expect(lines[0]).to start_with '@rem call :encode '
         expect(lines[1]).to eq 'call :encode "D:\\video.mkv" 5 0.0 180.5 "D:\\video_2.mp4" "D\\:/video.log" 24/1'
+        expect(lines[2]).to start_with 'call :encode '
+      end
+
+      it 'max_duration を渡すとそれを超えるチャプターも @rem にする' do
+        lines = described_class.output_commands(video, max_duration: 600)
         expect(lines[2]).to start_with '@rem call :encode '
+      end
+
+      it 'min_duration を 0 にすると短いチャプターも出す' do
+        lines = described_class.output_commands(video, min_duration: 0)
+        expect(lines[0]).to start_with 'call :encode '
       end
     end
   end

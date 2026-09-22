@@ -18,7 +18,9 @@ Write a Windows batch file to standard output that encodes each chapter of
 FILE(s) into a separate mp4 (x264 crf 18, or 2-pass abr 8192k when crf 18
 would exceed 8 Mbps).
 
-  -h, --help   display this help and exit
+  -h, --help            display this help and exit
+  --min-duration SECS   write chapters shorter than SECS as @rem (default 60; 0 = none)
+  --max-duration SECS   write chapters longer than SECS as @rem (default none)
 ```
 
 ``` shell
@@ -28,7 +30,8 @@ $ ./split_chapters disc1.mkv disc2.mkv > /mnt/d/encode.bat
 D:\> encode.bat
 ```
 
-出力ファイルはソースと同じディレクトリに `<ソース名>_<連番>.mp4`。2pass 用の stats ファイル（`<ソース名>.log` / `.mbtree`）もソースと同じディレクトリに置き、bat の最後で消す（別ディレクトリの同名ソースを並行してエンコードしても取り合わない）。60 秒未満・600 秒超のチャプターは `@rem` でコメントアウトした状態で出力する。
+出力ファイルはソースと同じディレクトリに `<ソース名>_<連番>.mp4`。2pass 用の stats ファイル（`<ソース名>.log` / `.mbtree`）もソースと同じディレクトリに置き、bat の最後で消す（別ディレクトリの同名ソースを並行してエンコードしても取り合わない）。60 秒未満のチャプター（タイトルカード・転換）は `@rem` でコメントアウトした状態で出力する。
+上限は既定では設けない。10 分超のチャプターは大半が MC だが、曲＋MC で 1 チャプターになっているものが時々あり（アンコール曲など）、飛ばすと追加エンコードと再照合の一周が要るので、MC を余分にエンコードするほうが安い。以前の挙動（600 秒超を飛ばす）にしたければ `--max-duration 600`。
 
 複数回に分けて生成したものを `>>` で単純連結してもよい（各出力は自分の `:encode` を一意なラベルへの `goto` で飛び越えるので、続けて次の出力が実行される）:
 

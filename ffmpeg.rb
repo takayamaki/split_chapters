@@ -4,8 +4,12 @@ require 'pathname'
 require 'securerandom'
 
 module FFMpeg
+  # chapters shorter than this (title cards, transitions) are written as @rem.
+  # there is no upper cutoff by default: a 10+ minute chapter is usually MC, but
+  # sometimes it is a song followed by MC, and skipping it costs a whole extra
+  # encode / match round to recover the song.
   MIN_DURATION = 60
-  MAX_DURATION = 600
+  MAX_DURATION = nil
 
   HEADER = <<~BAT
     @echo off
@@ -117,13 +121,21 @@ module FFMpeg
       FOOTER.gsub('__RUN_ID__', run_id).lines(chomp: true)
     end
 
-    def output_commands(video)
+    # min_duration / max_duration: seconds. nil (or 0 for max) means no cutoff on that side
+    def output_commands(video, min_duration: MIN_DURATION, max_duration: MAX_DURATION)
       seq_number_digits = video.chapters.length.to_s.length
       video.chapters.each.with_index(1).map do |chapter, seq_number|
         formatted_seq_number = format("%0#{seq_number_digits}d", seq_number)
         command = encode_call(video, chapter, formatted_seq_number)
-        (MIN_DURATION..MAX_DURATION).include?(chapter.duration) ? command : "@rem #{command}"
+        encode?(chapter.duration, min_duration, max_duration) ? command : "@rem #{command}"
       end
+    end
+
+    def encode?(duration, min_duration, max_duration)
+      return false if min_duration && duration < min_duration
+      return false if max_duration&.positive? && duration > max_duration
+
+      true
     end
 
     def remove_2pass_log_commands(src_path)
